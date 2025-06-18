@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Adivinhação com IA</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+        :root {
+            --primary-bg: #f0f4f8;
+            --container-bg: #ffffff;
+            --text-color: #333;
+            --button-bg: #4a90e2;
+            --button-hover-bg: #357abd;
+            --yes-button-bg: #5cb85c;
+            --yes-button-hover-bg: #4cae4c;
+            --no-button-bg: #d9534f;
+            --no-button-hover-bg: #c9302c;
+            --shadow: 0 4px 8px rgba(0,0,0,0.1);
+            --border-radius: 8px;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #game-container {
+            background-color: var(--container-bg);
+            padding: 2.5em;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            color: var(--button-bg);
+            margin-bottom: 1em;
+        }
+
+        #display-area {
+            font-size: 1.4em;
+            margin: 1.5em 0;
+            min-height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1.4;
+        }
+        
+        #button-area button, #start-button {
+            font-size: 1.1em;
+            padding: 12px 25px;
+            border: none;
+            border-radius: var(--border-radius);
+            color: white;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        #button-area button:hover, #start-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        #button-area button:active, #start-button:active {
+            transform: translateY(0);
+        }
+
+        #start-button {
+            background-color: var(--button-bg);
+        }
+
+        #start-button:hover {
+            background-color: var(--button-hover-bg);
+        }
+        
+        #yes-button {
+            background-color: var(--yes-button-bg);
+        }
+
+        #yes-button:hover {
+            background-color: var(--yes-button-hover-bg);
+        }
+
+        #no-button {
+            background-color: var(--no-button-bg);
+        }
+
+        #no-button:hover {
+            background-color: var(--no-button-hover-bg);
+        }
+
+        #learning-form {
+            margin-top: 1.5em;
+            text-align: left;
+        }
+        
+        #learning-form div {
+            margin-bottom: 1em;
+        }
+
+        #learning-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        #learning-form input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            border: 1px solid #ccc;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        
+        #learning-form button {
+            display: block;
+            width: 100%;
+            background-color: var(--button-bg);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <h1>Jogo de Adivinhação de Animais</h1>
+        <p>Pense em um animal e eu tentarei adivinhar!</p>
+
+        <div id="display-area">Pressione "Iniciar" para começar.</div>
+
+        <div id="button-area" class="hidden">
+            <button id="yes-button">Sim</button>
+            <button id="no-button">Não</button>
+        </div>
+
+        <div id="start-area">
+            <button id="start-button">Iniciar Jogo</button>
+        </div>
+
+        <div id="learning-form" class="hidden">
+            <div id="step1-new-animal">
+                <label for="new-animal-input">Ah, eu errei! Qual animal você pensou?</label>
+                <input type="text" id="new-animal-input" placeholder="Ex: Gato">
+            </div>
+            <div id="step2-new-question" class="hidden">
+                <label for="new-question-input"></label>
+                <input type="text" id="new-question-input" placeholder="Ex: Ele mia?">
+            </div>
+             <div id="step3-confirm-answer" class="hidden">
+                <p id="confirm-question-text"></p>
+                <!-- Os botões Sim/Não da área principal serão reutilizados aqui -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ELEMENTOS DA UI ---
+        const displayArea = document.getElementById('display-area');
+        const buttonArea = document.getElementById('button-area');
+        const startArea = document.getElementById('start-area');
+        const startButton = document.getElementById('start-button');
+        const yesButton = document.getElementById('yes-button');
+        const noButton = document.getElementById('no-button');
+        const learningForm = document.getElementById('learning-form');
+        const step1NewAnimal = document.getElementById('step1-new-animal');
+        const newAnimalInput = document.getElementById('new-animal-input');
+        const step2NewQuestion = document.getElementById('step2-new-question');
+        const newQuestionLabel = document.querySelector('#step2-new-question label');
+        const newQuestionInput = document.getElementById('new-question-input');
+        const step3ConfirmAnswer = document.getElementById('step3-confirm-answer');
+        const confirmQuestionText = document.getElementById('confirm-question-text');
+        
+        // --- ESTADO DO JOGO ---
+        let arvoreConhecimento;
+        let noAtual;
+        let noPai;
+        let ultimaResposta;
+        let gameState = 'IDLE';
+
+        // --- ÁRVORE DE CONHECIMENTO INICIAL EXPANDIDA ---
+        const arvoreInicial = {
+            tipo: 'pergunta',
+            texto: 'O animal que você pensou é um mamífero?',
+            sim: { // MAMÍFEROS
+                tipo: 'pergunta',
+                texto: 'Ele vive exclusivamente na água?',
+                sim: { // Mamíferos Aquáticos
+                    tipo: 'pergunta',
+                    texto: 'É conhecido por ser um dos maiores animais do planeta?',
+                    sim: { tipo: 'animal', nome: 'Baleia' },
+                    nao: { tipo: 'animal', nome: 'Golfinho' }
+                },
+                nao: { // Mamíferos Terrestres / Voadores
+                    tipo: 'pergunta',
+                    texto: 'É um primata?',
+                    sim: { // Primatas
+                        tipo: 'pergunta',
+                        texto: 'É um macaco de grande porte, como um gorila ou chimpanzé?',
+                        sim: {
+                            tipo: 'pergunta',
+                            texto: 'Ele é conhecido pela sua grande força e por ser mais robusto?',
+                            sim: { tipo: 'animal', nome: 'Gorila' },
+                            nao: { tipo: 'animal', nome: 'Chimpanzé' }
+                        },
+                        nao: { tipo: 'animal', nome: 'Macaco' }
+                    },
+                    nao: { // Não-Primatas
+                        tipo: 'pergunta',
+                        texto: 'É um felino?',
+                        sim: { // Felinos
+                            tipo: 'pergunta',
+                            texto: 'É um animal doméstico?',
+                            sim: { tipo: 'animal', nome: 'Gato' },
+                            nao: {
+                                tipo: 'pergunta',
+                                texto: 'É conhecido como o "rei da selva" e o macho tem uma juba?',
+                                sim: { tipo: 'animal', nome: 'Leão' },
+                                nao: { tipo: 'animal', nome: 'Tigre' }
+                            }
+                        },
+                        nao: { // Não-Felinos
+                            tipo: 'pergunta',
+                            texto: 'É um canídeo (parente dos cães)?',
+                            sim: { // Canídeos
+                                tipo: 'pergunta',
+                                texto: 'Geralmente vive em matilhas e uiva?',
+                                sim: { tipo: 'animal', nome: 'Lobo' },
+                                nao: { tipo: 'animal', nome: 'Raposa' }
+                            },
+                            nao: { 
+                                tipo: 'pergunta',
+                                texto: 'É um animal de fazenda comum?',
+                                sim: {
+                                    tipo: 'pergunta',
+                                    texto: 'É criado pela sua lã?',
+                                    sim: { tipo: 'animal', nome: 'Ovelha' },
+                                    nao: {
+                                        tipo: 'pergunta',
+                                        texto: 'É conhecido por rolar na lama?',
+                                        sim: { tipo: 'animal', nome: 'Porco' },
+                                        nao: {
+                                            tipo: 'pergunta',
+                                            texto: 'Produz leite e muge?',
+                                            sim: { tipo: 'animal', nome: 'Vaca' },
+                                            nao: { tipo: 'animal', nome: 'Cavalo' }
+                                        }
+                                    }
+                                },
+                                nao: {
+                                    tipo: 'pergunta',
+                                    texto: 'É um urso?',
+                                    sim: {
+                                        tipo: 'pergunta',
+                                        texto: 'Ele é branco e vive no Ártico?',
+                                        sim: { tipo: 'animal', nome: 'Urso Polar' },
+                                        nao: { tipo: 'animal', nome: 'Urso Pardo' }
+                                    },
+                                    nao: {
+                                        tipo: 'pergunta',
+                                        texto: 'É um roedor?',
+                                        sim: {
+                                            tipo: 'pergunta',
+                                            texto: 'É pequeno e comum em cidades?',
+                                            sim: { tipo: 'animal', nome: 'Rato' },
+                                            nao: { tipo: 'animal', nome: 'Esquilo' }
+                                        },
+                                        nao: {
+                                            tipo: 'pergunta',
+                                            texto: 'É um marsupial da Austrália?',
+                                            sim: {
+                                                tipo: 'pergunta',
+                                                texto: 'Ele pula com as patas traseiras fortes?',
+                                                sim: { tipo: 'animal', nome: 'Canguru' },
+                                                nao: { tipo: 'animal', nome: 'Coala' }
+                                            },
+                                            nao: {
+                                                tipo: 'pergunta',
+                                                texto: 'É um mamífero que pode voar?',
+                                                sim: { tipo: 'animal', nome: 'Morcego' },
+                                                nao: { 
+                                                    tipo: 'pergunta',
+                                                    texto: 'Tem um pescoço muito comprido?',
+                                                    sim: { tipo: 'animal', nome: 'Girafa' },
+                                                    nao: {
+                                                        tipo: 'pergunta',
+                                                        texto: 'Tem listras pretas e brancas?',
+                                                        sim: { tipo: 'animal', nome: 'Zebra' },
+                                                        nao: {
+                                                            tipo: 'pergunta',
+                                                            texto: 'Tem um chifre no nariz?',
+                                                            sim: { tipo: 'animal', nome: 'Rinoceronte' },
+                                                            nao: {
+                                                                tipo: 'pergunta',
+                                                                texto: 'É grande, cinza e tem uma tromba?',
+                                                                sim: { tipo: 'animal', nome: 'Elefante' },
+                                                                nao: { tipo: 'animal', nome: 'Hipopótamo' }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            nao: { // NÃO-MAMÍFEROS
+                tipo: 'pergunta',
+                texto: 'Seu corpo é coberto por penas?',
+                sim: { // AVES
+                    tipo: 'pergunta',
+                    texto: 'Consegue voar?',
+                    sim: { // Aves Voadoras
+                        tipo: 'pergunta',
+                        texto: 'É uma ave de rapina (caçadora)?',
+                        sim: {
+                            tipo: 'pergunta',
+                            texto: 'É um símbolo nacional dos EUA e tem a cabeça branca?',
+                            sim: { tipo: 'animal', nome: 'Águia' },
+                            nao: {
+                                tipo: 'pergunta',
+                                texto: 'É conhecido por caçar à noite?',
+                                sim: { tipo: 'animal', nome: 'Coruja' },
+                                nao: { tipo: 'animal', nome: 'Falcão' }
+                            }
+                        },
+                        nao: {
+                            tipo: 'pergunta',
+                            texto: 'É conhecido por imitar a fala humana?',
+                            sim: { tipo: 'animal', nome: 'Papagaio' },
+                            nao: {
+                                tipo: 'pergunta',
+                                texto: 'Tem um bico enorme e colorido?',
+                                sim: { tipo: 'animal', nome: 'Tucano' },
+                                nao: {
+                                    tipo: 'pergunta',
+                                    texto: 'É uma ave doméstica comum em lagos?',
+                                    sim: { tipo: 'animal', nome: 'Pato' },
+                                    nao: { tipo: 'animal', nome: 'Pombo' }
+                                }
+                            }
+                        }
+                    },
+                    nao: { // Aves Não Voadoras
+                        tipo: 'pergunta',
+                        texto: 'É preto e branco e vive em climas frios?',
+                        sim: { tipo: 'animal', nome: 'Pinguim' },
+                        nao: {
+                            tipo: 'pergunta',
+                            texto: 'É a maior ave do mundo?',
+                            sim: { tipo: 'animal', nome: 'Avestruz' },
+                            nao: {
+                                tipo: 'pergunta',
+                                texto: 'É rosa e costuma ficar em um pé só?',
+                                sim: { tipo: 'animal', nome: 'Flamingo' },
+                                nao: { tipo: 'animal', nome: 'Galinha' }
+                            }
+                        }
+                    }
+                },
+                nao: { // NÃO-AVES
+                    tipo: 'pergunta',
+                    texto: 'Ele vive na água e respira por brânquias?',
+                    sim: { // PEIXES
+                        tipo: 'pergunta',
+                        texto: 'É um grande predador dos oceanos?',
+                        sim: { tipo: 'animal', nome: 'Tubarão' },
+                        nao: {
+                            tipo: 'pergunta',
+                            texto: 'É um peixe laranja e branco famoso por um filme de animação?',
+                            sim: { tipo: 'animal', nome: 'Peixe-palhaço' },
+                            nao: {
+                                tipo: 'pergunta',
+                                texto: 'É um peixe rosado que nada contra a correnteza para desovar?',
+                                sim: { tipo: 'animal', nome: 'Salmão' },
+                                nao: { tipo: 'animal', nome: 'Atum' }
+                            }
+                        }
+                    },
+                    nao: { // NÃO-PEIXES (Répteis, Anfíbios, Insetos...)
+                        tipo: 'pergunta',
+                        texto: 'Tem o corpo coberto por escamas e pele seca?',
+                        sim: { // RÉPTEIS
+                            tipo: 'pergunta',
+                            texto: 'Ele tem um casco para se proteger?',
+                            sim: {
+                                tipo: 'pergunta',
+                                texto: 'Vive principalmente no mar?',
+                                sim: { tipo: 'animal', nome: 'Tartaruga Marinha' },
+                                nao: { tipo: 'animal', nome: 'Jabuti' }
+                            },
+                            nao: {
+                                tipo: 'pergunta',
+                                texto: 'Ele não tem patas?',
+                                sim: { tipo: 'animal', nome: 'Cobra' },
+                                nao: {
+                                    tipo: 'pergunta',
+                                    texto: 'É um grande predador de rios?',
+                                    sim: {
+                                        tipo: 'pergunta',
+                                        texto: 'Tem o focinho mais largo e arredondado (em forma de "U")?',
+                                        sim: { tipo: 'animal', nome: 'Jacaré' },
+                                        nao: { tipo: 'animal', nome: 'Crocodilo' }
+                                    },
+                                    nao: {
+                                        tipo: 'pergunta',
+                                        texto: 'É conhecido por mudar de cor?',
+                                        sim: { tipo: 'animal', nome: 'Camaleão' },
+                                        nao: { tipo: 'animal', nome: 'Lagarto' }
+                                    }
+                                }
+                            }
+                        },
+                        nao: { // NÃO-RÉPTEIS (Anfíbios, Insetos, etc.)
+                            tipo: 'pergunta',
+                            texto: 'É um inseto (geralmente com 6 patas)?',
+                            sim: { // INSETOS
+                                tipo: 'pergunta',
+                                texto: 'Produz mel?',
+                                sim: { tipo: 'animal', nome: 'Abelha' },
+                                nao: {
+                                    tipo: 'pergunta',
+                                    texto: 'Passa por uma metamorfose de lagarta para uma forma com asas coloridas?',
+                                    sim: { tipo: 'animal', nome: 'Borboleta' },
+                                    nao: {
+                                        tipo: 'pergunta',
+                                        texto: 'Vive em grandes colônias organizadas?',
+                                        sim: { tipo: 'animal', nome: 'Formiga' },
+                                        nao: { tipo: 'animal', nome: 'Gafanhoto' }
+                                    }
+                                }
+                            },
+                            nao: { // NÃO-INSETOS
+                                tipo: 'pergunta',
+                                texto: 'Tem pele úmida e passa por uma fase larval na água (girino)?',
+                                sim: { // ANFÍBIOS
+                                    tipo: 'pergunta',
+                                    texto: 'É conhecido por pular e coaxar?',
+                                    sim: { tipo: 'animal', nome: 'Sapo' },
+                                    nao: { tipo: 'animal', nome: 'Salamandra' }
+                                },
+                                nao: { // ARACNÍDEOS / MOLUSCOS
+                                    tipo: 'pergunta',
+                                    texto: 'Tem 8 patas?',
+                                    sim: { // ARACNÍDEOS
+                                        tipo: 'pergunta',
+                                        texto: 'Constrói teias?',
+                                        sim: { tipo: 'animal', nome: 'Aranha' },
+                                        nao: { tipo: 'animal', nome: 'Escorpião' }
+                                    },
+                                    nao: { // MOLUSCOS
+                                        tipo: 'pergunta',
+                                        texto: 'É um animal marinho com corpo mole e tentáculos?',
+                                        sim: {
+                                            tipo: 'pergunta',
+                                            texto: 'É famoso por ter 8 tentáculos?',
+                                            sim: { tipo: 'animal', nome: 'Polvo' },
+                                            nao: { tipo: 'animal', nome: 'Lula' }
+                                        },
+                                        nao: { 
+                                            tipo: 'animal', nome: 'Minhoca'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        // --- FUNÇÕES DE PERSISTÊNCIA ---
+        function salvarArvore() {
+            try {
+                localStorage.setItem('arvoreConhecimentoAnimais', JSON.stringify(arvoreConhecimento));
+            } catch (e) {
+                console.error("Erro ao salvar a árvore no localStorage:", e);
+            }
+        }
+
+        function carregarArvore() {
+            try {
+                const arvoreSalva = localStorage.getItem('arvoreConhecimentoAnimais');
+                if (arvoreSalva) {
+                    arvoreConhecimento = JSON.parse(arvoreSalva);
+                } else {
+                    arvoreConhecimento = JSON.parse(JSON.stringify(arvoreInicial));
+                }
+            } catch (e) {
+                console.error("Erro ao carregar a árvore. Usando a árvore inicial.", e);
+                arvoreConhecimento = JSON.parse(JSON.stringify(arvoreInicial));
+            }
+        }
+        
+        // --- LÓGICA DO JOGO ---
+        function iniciarJogo() {
+            carregarArvore();
+            noPai = null;
+            ultimaResposta = null;
+            noAtual = arvoreConhecimento;
+            gameState = 'ASKING';
+            atualizarUI();
+        }
+
+        function atualizarUI() {
+            learningForm.classList.add('hidden');
+            step1NewAnimal.classList.add('hidden');
+            step2NewQuestion.classList.add('hidden');
+            step3ConfirmAnswer.classList.add('hidden');
+
+            if (gameState === 'IDLE' || gameState === 'FINISHED') {
+                buttonArea.classList.add('hidden');
+                startArea.classList.remove('hidden');
+                startButton.textContent = 'Jogar Novamente';
+                if (gameState === 'FINISHED') {
+                    // Mantém a mensagem final por um tempo antes de mudar
+                } else {
+                   displayArea.textContent = 'Pressione "Iniciar" para começar.';
+                }
+            } else {
+                buttonArea.classList.remove('hidden');
+                startArea.classList.add('hidden');
+            }
+
+            if (gameState === 'ASKING') {
+                displayArea.textContent = noAtual.texto;
+            } else if (gameState === 'GUESSING') {
+                displayArea.textContent = `O animal que você pensou é um(a) ${noAtual.nome}?`;
+            } else if (gameState === 'LEARNING') {
+                buttonArea.classList.add('hidden');
+                learningForm.classList.remove('hidden');
+                
+                if (!newAnimalInput.value.trim()) {
+                    step1NewAnimal.classList.remove('hidden');
+                    newAnimalInput.focus();
+                } else if (!newQuestionInput.value.trim()) {
+                    step1NewAnimal.classList.add('hidden');
+                    step2NewQuestion.classList.remove('hidden');
+                    newQuestionLabel.textContent = `O que um(a) ${newAnimalInput.value} tem que um(a) ${noAtual.nome} não tem?`;
+                    newQuestionInput.focus();
+                } else {
+                    step2NewQuestion.classList.add('hidden');
+                    step3ConfirmAnswer.classList.remove('hidden');
+                    buttonArea.classList.remove('hidden');
+                    confirmQuestionText.textContent = `Para a pergunta "${newQuestionInput.value}", a resposta para um(a) ${newAnimalInput.value} seria "Sim"?`;
+                }
+            }
+        }
+
+        function responder(resposta) {
+            if (gameState === 'ASKING') {
+                noPai = noAtual;
+                ultimaResposta = resposta;
+                noAtual = noAtual[resposta];
+                gameState = (noAtual.tipo === 'pergunta') ? 'ASKING' : 'GUESSING';
+            } else if (gameState === 'GUESSING') {
+                if (resposta === 'sim') {
+                    displayArea.textContent = 'Eu venci! Sou o melhor!';
+                    gameState = 'FINISHED';
+                } else {
+                    gameState = 'LEARNING';
+                }
+            } else if (gameState === 'LEARNING') {
+                aprender(resposta);
+            }
+            atualizarUI();
+        }
+
+        function aprender(respostaParaNovoAnimal) {
+            const animalErrado = { ...noAtual };
+            const novoAnimalNome = newAnimalInput.value.trim();
+            const novaPerguntaTexto = newQuestionInput.value.trim();
+            const novoAnimalNo = { tipo: 'animal', nome: novoAnimalNome };
+            const novaPerguntaNo = {
+                tipo: 'pergunta',
+                texto: novaPerguntaTexto,
+                sim: (respostaParaNovoAnimal === 'sim') ? novoAnimalNo : animalErrado,
+                nao: (respostaParaNovoAnimal === 'nao') ? novoAnimalNo : animalErrado
+            };
+            
+            if (noPai) {
+                noPai[ultimaResposta] = novaPerguntaNo;
+            } else {
+                arvoreConhecimento = novaPerguntaNo;
+            }
+
+            salvarArvore();
+            displayArea.textContent = 'Obrigado por me ensinar! Aprendi algo novo.';
+            newAnimalInput.value = '';
+            newQuestionInput.value = '';
+            gameState = 'FINISHED';
+            atualizarUI();
+        }
+
+        // --- EVENT LISTENERS ---
+        startButton.addEventListener('click', iniciarJogo);
+        yesButton.addEventListener('click', () => responder('sim'));
+        noButton.addEventListener('click', () => responder('nao'));
+        
+        newAnimalInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && newAnimalInput.value.trim()) {
+                e.preventDefault();
+                atualizarUI();
+            }
+        });
+
+        newQuestionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && newQuestionInput.value.trim()) {
+                e.preventDefault();
+                atualizarUI();
+            }
+        });
+
+        // --- INICIALIZAÇÃO ---
+        carregarArvore();
+        
+    </script>
+</body>
+</html>
