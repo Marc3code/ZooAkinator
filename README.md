@@ -2,10 +2,15 @@
 
 Grupo: 
 Marcos Bernardino de Sousa Terceiro
+
 João Marcelo Nunes de Souza
+
 Igor Dias Anisio
+
 João Augusto Silva Nolasco
+
 Erica Kathlen de Andrade dos Santos
+
 Marlos Emanuel da Silveira Fontes
 
 Um jogo de adivinhação de animais com uma IA simples que aprende com o jogador. Quando erra, o sistema pede a resposta correta e uma nova pergunta para expandir sua base de conhecimento, que fica salva no navegador.
