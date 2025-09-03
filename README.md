@@ -57,41 +57,13 @@ Como este é um projeto front-end autocontido, não há necessidade de instalaç
 
 1.  Clone este repositório:
     ```bash
-    git clone https://github.com/seu-usuario/seu-repositorio.git
+    git clone https://github.com/Marc3code/ZooAkinator.git
     ```
 2.  Navegue até a pasta do projeto:
     ```bash
-    cd seu-repositorio
+    cd ZooAkinator
     ```
 3.  Abra o arquivo `index.html` diretamente em seu navegador de preferência.
-
-## 🔮 Atualizações Futuras e Roteiro de Evolução
-
-O objetivo é transformar este projeto de uma experiência local e individual para uma plataforma web colaborativa e inteligente.
-
-### 1. Disponibilização Online e Banco de Dados Centralizado
-
-A próxima grande etapa é mover a base de conhecimento de `localStorage` para um banco de dados na nuvem. Isso permitirá que o conhecimento adquirido por um jogador beneficie todos os outros, criando uma **inteligência coletiva** que cresce com o tempo.
-
-* **Plano de Ação:**
-    1.  **Deploy da Aplicação:** Hospedar o front-end em uma plataforma como **Vercel**, **Netlify** ou **GitHub Pages**.
-    2.  **Criação de uma API Backend:** Desenvolver um backend simples (ex: com Node.js e Express) que servirá como intermediário entre o front-end e o banco de dados.
-    3.  **Migração para Banco de Dados Online:**
-        * **Tecnologia Recomendada:** Um banco de dados NoSQL como o **MongoDB** (utilizando o serviço em nuvem **MongoDB Atlas**) é a escolha ideal para este caso. Sua natureza baseada em documentos permite armazenar a estrutura aninhada da árvore de conhecimento (JSON) de forma nativa e eficiente, facilitando a leitura e a atualização de ramos específicos.
-
-### 2. Moderação de Conteúdo com LLMs
-
-Com um banco de dados público e colaborativo, surge o desafio de garantir a qualidade e a integridade dos dados inseridos pelos usuários. Respostas inadequadas, ofensivas ou sem sentido poderiam corromper a base de conhecimento.
-
-* **Plano de Ação:**
-    1.  **Implementação de um Gateway de Validação:** Antes que uma nova pergunta ou animal seja salvo no banco de dados, a API de backend enviará os dados para um modelo de linguagem grande (LLM) para validação.
-    2.  **Modelo a Ser Utilizado:** A API do **Google Gemini** ou do **OpenAI (GPT)** pode ser integrada para realizar as seguintes verificações automáticas:
-        * **Análise de Coerência:** O LLM verificará se a pergunta e a resposta são lógicas dentro do contexto de um jogo sobre animais. (Ex: A pergunta "Ele tem um chifre no nariz?" para o animal "Rinoceronte" é coerente).
-        * **Verificação Ética e de Segurança:** O modelo analisará o texto para identificar e bloquear conteúdo impróprio, ofensivo, discurso de ódio ou qualquer informação que viole as diretrizes de segurança.
-
-A implementação dessas duas atualizações transformará o projeto em uma aplicação web robusta, escalável e segura, onde uma comunidade de usuários pode, de forma colaborativa, "ensinar" uma IA de maneira divertida e construtiva.
-
----
 
 ## 📜 Licença
 
